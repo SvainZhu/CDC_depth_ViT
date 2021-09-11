@@ -54,7 +54,7 @@ def contrast_depth_conv(input):
 
     kernel_filter = np.array(kernel_filter_list, np.float32)
 
-    kernel_filter = torch.from_numpy(kernel_filter.astype(np.float64)).float().cuda()
+    kernel_filter = torch.from_numpy(kernel_filter.astype(np.float32)).float().cuda()
     # weights (in_channel, out_channel, kernel, kernel)
     kernel_filter = kernel_filter.unsqueeze(dim=1)
 
@@ -74,14 +74,13 @@ class Contrast_depth_loss(nn.Module):  # Pearson range [-1, 1] so if < 0, abs|lo
         '''
         compute contrast depth in both of (out, label),
         then get the loss of them
-        tf.atrous_convd match tf-versions: 1.4
         '''
         contrast_out = contrast_depth_conv(out)
         contrast_label = contrast_depth_conv(label)
 
         criterion_MSE = nn.MSELoss().cuda()
 
-        loss = criterion_MSE(contrast_out, contrast_label)
+        loss = criterion_MSE(contrast_out, contrast_label) * 0.001
         # loss = torch.pow(contrast_out - contrast_label, 2)
         # loss = torch.mean(loss)
 
@@ -362,8 +361,7 @@ if __name__ == '__main__':
     model = vit_base_patch16_224(num_classes=1, has_logits=False)
     model.train()
     model = nn.DataParallel(model.cuda())
-    criterion = nn.BCEWithLogitsLoss()
-    criterion.cuda()
+    criterion = nn.BCEWithLogitsLoss().cuda()
     criterion_contrastive_loss = Contrast_depth_loss().cuda()
 
     optimizer_ft = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.001)
