@@ -65,19 +65,23 @@ class PatchEmbed(nn.Module):
 
     def __init__(self,
                  img_size=224,
+                 patch_size=16,
                  input_c=3,
                  embed_dim=768,
                  theta=0.7,
                  norm_layer=None):
         super(PatchEmbed, self).__init__()
         img_size = (img_size, img_size)
+        patch_size = (patch_size, patch_size)
         self.img_size = img_size
-        self.num_pathches = embed_dim
+        self.patch_size = patch_size
+        self.grid_size = (img_size[0] // patch_size[0], img_size[1] // patch_size[1])
+        self.num_pathches = self.grid_size[0] * self.grid_size[1]
         self.stem_conv = nn.Sequential(
-            cdc_conv(input_c, 64, kernel_size=7, stride=2, padding=1, bias=False, theta=theta),
+            cdc_conv(input_c, 64, kernel_size=3, stride=2, padding=1, bias=False, theta=theta),
             nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1),
         )
 
         self.Block1 = nn.Sequential(
@@ -90,7 +94,7 @@ class PatchEmbed(nn.Module):
             cdc_conv(196, 128, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
             nn.BatchNorm2d(128),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=1, padding=1),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         )
 
         self.Block2 = nn.Sequential(
@@ -119,8 +123,6 @@ class PatchEmbed(nn.Module):
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         )
 
-        self.last_conv = nn.Conv2d(1024, embed_dim, kernel_size=1, stride=1, padding=1, bias=False)
-
         self.lastconv1 = nn.Sequential(
             cdc_conv(128 * 3, 128, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
             nn.BatchNorm2d(128),
@@ -138,7 +140,7 @@ class PatchEmbed(nn.Module):
             nn.ReLU(),
         )
 
-        self.downsample32x32 = nn.Upsample(size=(32, 32), mode='bilinear')
+        self.downsample32x32 = nn.Upsample(size=(32, 32), mode='bilinear', align_corners=True)
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
     def forward(self, x):
@@ -148,22 +150,54 @@ class PatchEmbed(nn.Module):
         # flatten: [B, C, H, W] -> [B, C, H*W]
         # transpose: [B, C, H*W] -> [B, H*W, C]
         out = self.stem_conv(x)
-        out_Block1 = self.Block1(out)                           # out_Block1 [56, 56, 128]
+        out_Block1 = self.Block1(out)                           # out_Block1 [112, 112, 128]
         out_Block1_32x32 = self.downsample32x32(out_Block1)
-        out_Block2 = self.Block2(out_Block1)                    # out_Block1 [28, 28, 128]
+        out_Block2 = self.Block2(out_Block1)                    # out_Block2 [56, 56, 128]
         out_Block2_32x32 = self.downsample32x32(out_Block2)
-        out_Block3 = self.Block3(out_Block2)                    # out_Block1 [14, 14, 128]
+        out_Block3 = self.Block3(out_Block2)                    # out_Block3 [28, 28, 128]
         out_Block3_32x32 = self.downsample32x32(out_Block3)
 
-        out = self.last_conv(out_Block3).flatten(2).transpose(1, 2)
-        out = self.norm(out)
+        # out = self.last_conv(out_Block3).flatten(2).transpose(1, 2)
+        # out = self.norm(out)
 
         map_concat = torch.cat((out_Block1_32x32, out_Block2_32x32, out_Block3_32x32), dim=1)
-        map = self.lastconv1(map_concat)
+
+        return map_concat
+
+
+class map_extract(nn.Module):
+    def __init__(self,
+                 in_c: int=128*3,
+                 out_c: int = 1,
+                 theta: float = 0.7):
+        super(map_extract, self).__init__()
+
+        self.in_c = in_c
+        self.out_c = out_c
+        self.lastconv1 = nn.Sequential(
+            cdc_conv(in_c, 128, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+        )
+
+        self.lastconv2 = nn.Sequential(
+            cdc_conv(128, 64, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+        )
+
+        self.lastconv3 = nn.Sequential(
+            cdc_conv(64, out_c, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
+            nn.ReLU(),
+        )
+
+    def forward(self, x):
+        assert x.shape[1] == self.in_c
+        map = self.lastconv1(x)
         map = self.lastconv2(map)
         map = self.lastconv3(map).squeeze(1)
 
-        return out, map
+        return map
 
 
 class Attention(nn.Module):
@@ -225,7 +259,7 @@ class MLP(nn.Module):
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
         self.fc1 = nn.Linear(in_features, hidden_features)
-        self.ac = activation_layer
+        self.ac = activation_layer()
         self.fc2 = nn.Linear(hidden_features, out_features)
         self.dropout = nn.Dropout(drop_rate)
 
@@ -303,8 +337,13 @@ class VisionTransformer(nn.Module):
         norm_layer = norm_layer or partial(nn.LayerNorm, eps=1e-6)
         ac_layer = ac_layer or nn.GELU
 
-        self.patch_embed, self.map = embed_layer(img_size=img_size, patch_size=patch_size, input_c=input_c, embed_dim=embed_dim)
-        num_patches = self.patch_embed.num_pathches
+
+        self.map_concat = embed_layer(img_size=img_size, patch_size=patch_size, input_c=input_c, embed_dim=embed_dim)
+        self.map_extracter = map_extract(in_c=128*3, out_c=1)
+        self.last_conv = nn.Conv2d(in_channels=384, out_channels=768, kernel_size=5, stride=2, padding=0)
+
+
+        num_patches = self.map_concat.num_pathches
 
         self.class_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.dist_token = nn.Parameter(torch.zeros(1, 1, embed_dim)) if distilled else None
@@ -345,7 +384,9 @@ class VisionTransformer(nn.Module):
 
     def forward_features(self, x):
         # [B, C, H, W] -> [B, num_patches, embed_dim]
-        out = self.patch_embed(x)
+        out = self.map_concat(x)
+        map = self.map_extracter(out)
+        out = self.last_conv(out).flatten(2).transpose(1, 2)
         # [1, 1, 768] -> [B, 1, 768]
         class_token = self.class_token.expand(out.shape[0], -1, -1)
         if self.dist_token is None:
@@ -358,12 +399,12 @@ class VisionTransformer(nn.Module):
         out = self.blocks(out)
         out = self.norm(out)
         if self.dist_token is None:
-            return self.pre_logits(out[:, 0])
+            return map, self.pre_logits(out[:, 0])
         else:
             return out[:, 0], out[:, 1]
 
     def forward(self, x):
-        out = self.forward_features(x)
+        map, out = self.forward_features(x)
         if self.head_dist is not None:
             out, out_dist = self.head(out[0]), self.head_dist(out[1])
             if self.training and not torch.jit.is_scripting():
@@ -372,7 +413,6 @@ class VisionTransformer(nn.Module):
                 return (out + out_dist) / 2
         else:
             out = self.head(out)
-        map = self.map
         return out, map
 
 

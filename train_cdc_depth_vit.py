@@ -54,7 +54,7 @@ def contrast_depth_conv(input):
 
     kernel_filter = np.array(kernel_filter_list, np.float32)
 
-    kernel_filter = torch.from_numpy(kernel_filter.astype(np.float)).float().cuda()
+    kernel_filter = torch.from_numpy(kernel_filter.astype(np.float64)).float().cuda()
     # weights (in_channel, out_channel, kernel, kernel)
     kernel_filter = kernel_filter.unsqueeze(dim=1)
 
@@ -133,11 +133,12 @@ def train_model(model, model_dir, criterion, depth_criterion, optimizer, schedul
 
             y_scores, y_trues = [], []
             for i, (inputs, maps_label, labels) in enumerate(dataloaders[phase]):
-                inputs, maps_label, labels = inputs.cuda(), maps_label.cuda(), labels.to(torch.float32).cuda()
+                inputs, maps_label, labels = inputs.cuda(), maps_label.to(torch.float32).cuda(), labels.to(torch.float32).cuda()
 
                 if phase == 'train':
                     optimizer.zero_grad()
                     outputs, maps = model(inputs)
+                    outputs = outputs.squeeze(1)
                     absolute_loss = criterion(outputs, labels)
                     depth_loss = depth_criterion(maps, maps_label)
                     loss = absolute_loss + depth_loss
@@ -287,15 +288,15 @@ def validation_data(test_file, test_map_file):
 
 if __name__ == '__main__':
     # Modify the following directories to yourselves
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     start = time.time()
     current_epoch = 0
-    batch_size = 32
-    train_csv = r'H:/zsw/Data/OULU/CSV/train_1.csv'  # The train split file
-    val_csv = r'H:/zsw/Data/OULU/CSV/val_1.csv'      # The validation split file
+    batch_size = 8
+    train_csv = r'H:/zsw/Data/OULU/CSV/train_2.csv'  # The train split file
+    val_csv = r'H:/zsw/Data/OULU/CSV/val_2.csv'      # The validation split file
 
-    train_map_csv = r'H:/zsw/Data/OULU/CSV/train_map_1.csv'  # The train split file
-    val_map_csv = r'H:/zsw/Data/OULU/CSV/val_map_1.csv'  # The validation split file
+    train_map_csv = r'H:/zsw/Data/OULU/CSV/train_map_2.csv'  # The train split file
+    val_map_csv = r'H:/zsw/Data/OULU/CSV/val_map_2.csv'  # The validation split file
 
     #  Output path
     model_dir = 'E:/zsw/CDC_ViT/model_out/CDC_depth_ViT1/'

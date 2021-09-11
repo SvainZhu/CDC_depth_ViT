@@ -221,9 +221,9 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     start = time.time()
     current_epoch = 0
-    batch_size = 16
-    train_csv = r'H:/zsw/Data/OULU/CSV/train_1.csv'  # The train split file
-    val_csv = r'H:/zsw/Data/OULU/CSV/val_1.csv'      # The validation split file
+    batch_size = 8
+    train_csv = r'H:/zsw/Data/OULU/CSV/train_2.csv'  # The train split file
+    val_csv = r'H:/zsw/Data/OULU/CSV/test_2.csv'      # The validation split file
 
     #  Output path
     model_dir = 'E:/zsw/CDC_depth_ViTViT/model_out/CDC_depth_ViT1/'
