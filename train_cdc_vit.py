@@ -218,15 +218,15 @@ def validation_data(csv_file):
 
 if __name__ == '__main__':
     # Modify the following directories to yourselves
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     start = time.time()
     current_epoch = 0
-    batch_size = 8
-    train_csv = r'H:/zsw/Data/OULU/CSV/train_2.csv'  # The train split file
-    val_csv = r'H:/zsw/Data/OULU/CSV/test_2.csv'      # The validation split file
+    batch_size = 16
+    train_csv = r'H:/zsw/Data/OULU/CSV/train_1.csv'  # The train split file
+    val_csv = r'H:/zsw/Data/OULU/CSV/test_1.csv'      # The validation split file
 
     #  Output path
-    model_dir = 'E:/zsw/CDC_depth_ViTViT/model_out/CDC_depth_ViT1/'
+    model_dir = 'E:/zsw/CDC_depth_ViT/model_out/CDC_ViT1/'
 
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)

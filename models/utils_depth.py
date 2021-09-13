@@ -39,10 +39,13 @@ class Dataset_Csv(data.Dataset):
         face_temp = crop_face_from_scene(image=img, face_name_full=bbox_path, scale=face_scale)
         face = self.transform(image=face_temp)['image']
         map_temp = cv2.imread(map_path, 0)
-        map = cv2.resize(crop_face_from_scene(image=map_temp, face_name_full=bbox_path, scale=face_scale), (32, 32))
+        if map_temp is None:
+            map = numpy.zeros((32, 32))
+            map = numpy.int8(map)
+        else:
+            map = cv2.resize(crop_face_from_scene(image=map_temp, face_name_full=bbox_path, scale=face_scale), (32, 32))
         label = self.labels[index]  # (labels) LongTensor are for int64 instead of FloatTensor
 
-        # print(X.shape)
         return face, map, label
 
 def crop_face_from_scene(image, face_name_full, scale):
@@ -56,7 +59,6 @@ def crop_face_from_scene(image, face_name_full, scale):
     y_mid = (y1 + y2) / 2.0
     x_mid = (x1 + x2) / 2.0
     h_img, w_img = image.shape[0], image.shape[1]
-    # w_img,h_img=image.size
     w_scale = scale * w
     h_scale = scale * h
     y1 = y_mid - w_scale / 2.0

@@ -139,19 +139,9 @@ def train_model(model, model_dir, criterion, depth_criterion, optimizer, schedul
                     outputs, maps = model(inputs)
                     outputs = outputs.squeeze(1)
                     absolute_loss = criterion(outputs, labels)
-
-                    absolute_loss.backward(retain_graph=True)
-
                     depth_loss = depth_criterion(maps, maps_label)
-                    # cdc_module = ["map_concat", "map_extracter"]
-                    for name, params in model.named_parameters():
-                        if not "map_concat" in name:
-                            params.requires_grad = False
-                        if not "map_extracter" in name:
-                            params.requires_grad = False
-                    depth_loss.backward()
-
                     loss = absolute_loss + depth_loss
+                    loss.backward()
                     preds = torch.sigmoid(outputs)
                     optimizer.step()
                     for name, params in model.named_parameters():
@@ -302,7 +292,7 @@ if __name__ == '__main__':
     # Modify the following directories to yourselves
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     start = time.time()
-    current_epoch = 31
+    current_epoch = 0
     batch_size = 16
     train_csv = r'H:/zsw/Data/OULU/CSV/train_1.csv'  # The train split file
     val_csv = r'H:/zsw/Data/OULU/CSV/val_1.csv'      # The validation split file
@@ -374,7 +364,6 @@ if __name__ == '__main__':
     model = vit_base_patch16_224(num_classes=1, has_logits=False)
     model.train()
     model = nn.DataParallel(model.cuda())
-    model.load_state_dict(torch.load('./model_out/CDC_depth_ViT1/251499_vit.ckpt'))
 
     criterion = nn.BCEWithLogitsLoss().cuda()
     criterion_contrastive_loss = Contrast_depth_loss().cuda()
