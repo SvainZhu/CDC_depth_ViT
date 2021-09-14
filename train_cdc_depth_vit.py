@@ -380,7 +380,7 @@ if __name__ == '__main__':
     criterion = nn.BCEWithLogitsLoss().cuda()
     criterion_contrastive_loss = Contrast_depth_loss().cuda()
 
-    optimizer_ft = optim.Adam(model.parameters(), lr=0.001, weight_decay=0.001)
+    optimizer_ft = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.001)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.5)
 
     train_model(model=model, model_dir=model_dir, criterion=criterion,

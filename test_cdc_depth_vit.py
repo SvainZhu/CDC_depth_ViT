@@ -64,7 +64,7 @@ def test_model(dataloaders, test_label, dataset_name):
 
 
 if __name__ == "__main__":
-    test_csv = r'H:/zsw/Data/OULU/CSV/test_1.csv'      # The test file dataset
+    test_csv = r'H:/zsw/Data/OULU/CSV/train_1.csv'      # The test file dataset
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     dataset_name = 'Oulu-Protocol1'
     batch_size = 16
