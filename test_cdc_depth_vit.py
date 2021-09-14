@@ -1,7 +1,7 @@
 from __future__ import print_function, division
 import os
 import torch
-
+from collections import Iterable
 from torch.utils.data import DataLoader
 from models.utils import Dataset_Csv
 import csv
@@ -16,6 +16,13 @@ img_transforms = Compose([
     Normalize([0.5] * 3, [0.5] * 3),
     ToTensorV2()])
 
+def flatten(items, ignore_types=(str, bytes)):
+    for x in items:
+        if isinstance(x, Iterable) and not isinstance(x, ignore_types):
+            yield from flatten(x)
+        else:
+            yield x
+
 
 def test_data(csv_file):
     frame_reader = open(csv_file, 'r')
@@ -26,7 +33,6 @@ def test_data(csv_file):
         test_label.append(label)
         test_list.append(path)
     frame_reader.close()
-
 
 def test_model(dataloaders, test_label, dataset_name):
     model = vit_base_patch16_224(num_classes=1, has_logits=False)
@@ -40,8 +46,9 @@ def test_model(dataloaders, test_label, dataset_name):
         for i, (inputs, labels) in enumerate(dataloaders):
             inputs, labels = inputs.to(torch.float32).cuda(), labels.to(torch.float32).cuda()
             outputs, _ = model(inputs)
-            preds = torch.sigmoid(outputs)
+            preds = torch.sigmoid(outputs).cpu().numpy().tolist()
             preds_list.append(preds)
+    preds_list = list(flatten(preds_list))
 
     APCER, NPCER, ACER, ACC, HTER = calculate_statistic(preds_list, test_label)
     AUC = roc_auc_score(test_label, preds_list)
@@ -59,8 +66,8 @@ def test_model(dataloaders, test_label, dataset_name):
 if __name__ == "__main__":
     test_csv = r'H:/zsw/Data/OULU/CSV/test_1.csv'      # The test file dataset
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    dataset_name = 'Oulu-Protocol'
-    batch_size = 256
+    dataset_name = 'Oulu-Protocol1'
+    batch_size = 16
     test_list = []
     test_label = []
     test_data(test_csv)

@@ -304,7 +304,7 @@ if __name__ == '__main__':
     start = time.time()
     current_epoch = 31
     batch_size = 16
-    train_csv = r'H:/zsw/Data/OULU/CSV/train_1.csv'  # The train split file
+    train_csv = r'H:/zsw/Data/OULU/CSV/test_1.csv'  # The train split file
     val_csv = r'H:/zsw/Data/OULU/CSV/val_1.csv'      # The validation split file
 
     train_map_csv = r'H:/zsw/Data/OULU/CSV/train_map_1.csv'  # The train split file
@@ -373,13 +373,14 @@ if __name__ == '__main__':
 
     model = vit_base_patch16_224(num_classes=1, has_logits=False)
     model.train()
-    model = nn.DataParallel(model.cuda())
     model.load_state_dict(torch.load('./model_out/CDC_depth_ViT1/251499_vit.ckpt'))
+    model = nn.DataParallel(model.cuda())
+
 
     criterion = nn.BCEWithLogitsLoss().cuda()
     criterion_contrastive_loss = Contrast_depth_loss().cuda()
 
-    optimizer_ft = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.001)
+    optimizer_ft = optim.Adam(model.parameters(), lr=0.001, weight_decay=0.001)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.5)
 
     train_model(model=model, model_dir=model_dir, criterion=criterion,
