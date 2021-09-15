@@ -69,8 +69,7 @@ class PatchEmbed(nn.Module):
                  input_c=3,
                  embed_dim=768,
                  theta=0.7,
-                 norm_layer=None,
-                 use_cbam=False):
+                 norm_layer=None):
         super(PatchEmbed, self).__init__()
         img_size = (img_size, img_size)
         patch_size = (patch_size, patch_size)
@@ -156,15 +155,15 @@ class PatchEmbed(nn.Module):
         out = self.stem_conv(x)
         out_Block1 = self.Block1(out)                           # out_Block1 [112, 112, 128]
         out_cbam1 = self.cbam1(out_Block1)
-        out_Block1 *= out_cbam1
+        out_Block1 = out_Block1 * out_cbam1
         out_Block1_32x32 = self.downsample32x32(out_Block1)
         out_Block2 = self.Block2(out_Block1)                    # out_Block2 [56, 56, 128]
-        out_cbam2 = self.cbam1(out_Block1)
-        out_Block2 *= out_cbam2
+        out_cbam2 = self.cbam2(out_Block2)
+        out_Block2 = out_Block2 * out_cbam2
         out_Block2_32x32 = self.downsample32x32(out_Block2)
         out_Block3 = self.Block3(out_Block2)                    # out_Block3 [28, 28, 128]
-        out_cbam3 = self.cbam1(out_Block1)
-        out_Block3 *= out_cbam3
+        out_cbam3 = self.cbam3(out_Block3)
+        out_Block3 = out_Block3 * out_cbam3
         out_Block3_32x32 = self.downsample32x32(out_Block3)
 
         # out = self.last_conv(out_Block3).flatten(2).transpose(1, 2)
