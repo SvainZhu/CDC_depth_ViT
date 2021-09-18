@@ -302,7 +302,7 @@ if __name__ == '__main__':
     # Modify the following directories to yourselves
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     start = time.time()
-    current_epoch = 31
+    current_epoch = 10
     batch_size = 16
     train_csv = r'H:/zsw/Data/OULU/CSV/train_1.csv'  # The train split file
     val_csv = r'H:/zsw/Data/OULU/CSV/val_1.csv'      # The validation split file
@@ -373,7 +373,7 @@ if __name__ == '__main__':
 
     model = vit_base_patch16_224(num_classes=1, has_logits=False)
     model.train()
-    model.load_state_dict(torch.load('./model_out/CDC_depth_ViT1/251499_vit.ckpt'))
+    model.load_state_dict(torch.load('./model_out/CDC_depth_ViT1/491999_vit.ckpt'))
     model = nn.DataParallel(model.cuda())
 
 
@@ -387,7 +387,7 @@ if __name__ == '__main__':
                 depth_criterion=criterion_contrastive_loss,
                 optimizer=optimizer_ft,
                 scheduler=exp_lr_scheduler,
-                num_epochs=50,
+                num_epochs=60,
                 current_epoch=current_epoch)
 
     elapsed = (time.time() - start)

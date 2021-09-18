@@ -1,57 +1,72 @@
 from __future__ import print_function, division
+import torch.optim as optim
+import sys
+import time
+import numpy as np
 import os
 import torch
-from collections import Iterable
-from torch.utils.data import DataLoader
-from models.utils import Dataset_Csv
+from torch.optim import lr_scheduler
+from torch.utils.data import WeightedRandomSampler
+import torch.nn as nn
+from torch.utils import data
+from sklearn.metrics import accuracy_score, roc_curve, auc
+from random import shuffle
+from models.utils_depth import Dataset_Csv
 import csv
-from models.cdc_depth_vit_model import vit_base_patch16_224, vit_base_patch32_224
-from models.statistic import calculate_statistic
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import confusion_matrix
+from models.cdc_depth_vit_model_wCBAM import vit_base_patch16_224, vit_base_patch32_224
+import torch.nn.functional as F
 from albumentations import *
 from albumentations.pytorch import ToTensorV2
+from models.statistic import calculate_statistic
+from sklearn.metrics import roc_auc_score
 
-img_transforms = Compose([
+model_type = 'CDC_depth_ViT'
+if model_type == 'CDC_depth_ViT_wCBAM':
+    from models.cdc_depth_vit_model_wCBAM import vit_base_patch16_224
+elif model_type == 'CDC_depth_ViT':
+    from models.cdc_depth_vit_model import vit_base_patch16_224
+else:
+    raise ('Error model type!!!')
+
+
+vit_transforms = Compose([
     Resize(224, 224),
+    HorizontalFlip(p=0.5),
+    HueSaturationValue(p=0.5),
+    RandomBrightnessContrast(p=0.5),
+    OneOf([
+        IAAAdditiveGaussianNoise(),
+        GaussNoise(),
+    ], p=0.3),
+    OneOf([
+        MotionBlur(),
+        GaussianBlur(),
+        JpegCompression(quality_lower=65, quality_upper=80),
+    ], p=0.5),
     Normalize([0.5] * 3, [0.5] * 3),
-    ToTensorV2()])
+    ToTensorV2(),
+]
+)
 
-def flatten(items, ignore_types=(str, bytes)):
-    for x in items:
-        if isinstance(x, Iterable) and not isinstance(x, ignore_types):
-            yield from flatten(x)
-        else:
-            yield x
-
-
-def test_data(csv_file):
-    frame_reader = open(csv_file, 'r')
-    fnames = csv.reader(frame_reader)
-    for f in fnames:
-        path = f[0]
-        label = int(f[1])
-        test_label.append(label)
-        test_list.append(path)
-    frame_reader.close()
-
-def test_model(dataloaders, test_label, dataset_name):
-    model = vit_base_patch16_224(num_classes=1, has_logits=False)
-    model = model.cuda()
-    model.load_state_dict(torch.load('./model_out/CDC_depth_ViT1/49499_vit.ckpt'))
-
+def test_models(model, dataloaders, dataset_name):
     model.eval()
-    preds_list = []
-    with torch.no_grad():
+    y_scores, y_trues = [], []
+    for k, (inputs_val, maps_label, labels_val) in enumerate(dataloaders):
+        inputs_val, maps_label, labels_val = inputs_val.cuda(), maps_label.to(torch.float32).cuda(), labels_val.to(torch.float32).cuda()
+        with torch.no_grad():
+            outputs_val, maps_val = model(inputs_val)
+            outputs_val = outputs_val.squeeze(1)
+            preds = torch.sigmoid(outputs_val)
 
-        for i, (inputs, labels) in enumerate(dataloaders):
-            inputs, labels = inputs.to(torch.float32).cuda(), labels.to(torch.float32).cuda()
-            outputs, _ = model(inputs)
-            preds = torch.sigmoid(outputs).cpu().numpy().tolist()
-            preds_list.append(preds)
-    preds_list = list(flatten(preds_list))
+        y_true = labels_val.data.cpu().numpy()
+        y_score = preds.data.cpu().numpy()
+        y_scores.extend(y_score)
+        y_trues.extend(y_true)
 
-    APCER, NPCER, ACER, ACC, HTER = calculate_statistic(preds_list, test_label)
-    AUC = roc_auc_score(test_label, preds_list)
+    y_trues, y_scores = np.array(y_trues), np.array(y_scores)
+    APCER, NPCER, ACER, ACC, HTER = calculate_statistic(y_scores, y_trues)
+    AUC = roc_auc_score(y_trues, y_scores)
     print('\n===========Test Info===========\n')
     print(dataset_name, 'Test ACC: %5.4f' %(ACC))
     print(dataset_name, 'Test APCER: %5.4f' %(APCER))
@@ -62,16 +77,51 @@ def test_model(dataloaders, test_label, dataset_name):
     print('\n===============================\n')
 
 
+def test_data(test_file, test_map_file):
+    frame_reader = open(test_file, 'r')
+    csv_reader = csv.reader(frame_reader)
 
-if __name__ == "__main__":
-    test_csv = r'H:/zsw/Data/OULU/CSV/test_1.csv'      # The test file dataset
+    for f in csv_reader:
+        img_path = f[0]
+        label = int(f[1])
+        test_label.append(label)
+        test_list.append(img_path)
+    map_reader = open(test_map_file, 'r')
+    csv_reader = csv.reader(map_reader)
+    for f in csv_reader:
+        map_path = f[0]
+        test_map_list.append(map_path)
+
+
+
+if __name__ == '__main__':
+    # Modify the following directories to yourselves
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    dataset_name = 'Oulu-Protocol1'
     batch_size = 16
-    test_list = []
-    test_label = []
-    test_data(test_csv)
-    test_set = Dataset_Csv(test_list, test_label, transform=img_transforms)
-    test_dataloader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=4)
+    test_csv = r'H:/zsw/Data/OULU/CSV/test_1.csv'      # The validation split file
+    test_map_csv = r'H:/zsw/Data/OULU/CSV/test_map_1.csv'  # The train split file
 
-    test_model(test_dataloader, test_label, dataset_name)
+    use_cuda = torch.cuda.is_available()  # check if GPU exists
+    device = torch.device("cuda" if use_cuda else "cpu")  # use CPU or GPU
+
+    # Data loading parameters
+    params = {'shuffle': False, 'num_workers': 4, 'pin_memory': True} if use_cuda else {}
+
+
+    test_list = []
+    test_map_list = []
+    test_label = []
+
+    test_data(test_csv, test_map_csv)
+
+    test_set = Dataset_Csv(test_list, test_map_list, test_label, transform=vit_transforms)
+
+
+    image_datasets = data.DataLoader(test_set, batch_size=batch_size, **params)
+
+    model = vit_base_patch16_224(num_classes=1, has_logits=False)
+    model.load_state_dict(torch.load('./model_out/%s/%s_vit.ckpt' % (model_type + '1', '491999')))
+    model = nn.DataParallel(model.cuda())
+    dataset_name = "Oulu-Protocol1"
+
+    test_models(model=model, dataloaders=image_datasets, dataset_name=dataset_name)

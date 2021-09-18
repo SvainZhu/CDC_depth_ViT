@@ -302,7 +302,7 @@ if __name__ == '__main__':
     # Modify the following directories to yourselves
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     start = time.time()
-    current_epoch = 0
+    current_epoch = 46
     batch_size = 16
     train_csv = r'H:/zsw/Data/OULU/CSV/train_1.csv'  # The train split file
     val_csv = r'H:/zsw/Data/OULU/CSV/val_1.csv'      # The validation split file
@@ -311,7 +311,7 @@ if __name__ == '__main__':
     val_map_csv = r'H:/zsw/Data/OULU/CSV/val_map_1.csv'  # The validation split file
 
     #  Output path
-    model_dir = 'E:/zsw/CDC_depth_ViT/model_out/CDC_depth_ViT2(wCBAM)/'
+    model_dir = 'model_out/CDC_depth_ViT_wCBAM1/'
 
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
@@ -373,21 +373,21 @@ if __name__ == '__main__':
 
     model = vit_base_patch16_224(num_classes=1, has_logits=False)
     model.train()
-    # model.load_state_dict(torch.load('./model_out/CDC_depth_ViT1/251499_vit.ckpt'))
+    model.load_state_dict(torch.load('./model_out/CDC_depth_ViT_wCBAM1/451199_vit.ckpt'))
     model = nn.DataParallel(model.cuda())
 
 
     criterion = nn.BCEWithLogitsLoss().cuda()
     criterion_contrastive_loss = Contrast_depth_loss().cuda()
 
-    optimizer_ft = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.001)
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.5)
+    optimizer_ft = optim.Adam(model.parameters(), lr=6.25e-06, weight_decay=0.001)
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=4, gamma=0.5)
 
     train_model(model=model, model_dir=model_dir, criterion=criterion,
                 depth_criterion=criterion_contrastive_loss,
                 optimizer=optimizer_ft,
                 scheduler=exp_lr_scheduler,
-                num_epochs=70,
+                num_epochs=60,
                 current_epoch=current_epoch)
 
     elapsed = (time.time() - start)

@@ -14,17 +14,17 @@ if __name__ == '__main__':
     val_map_dir = 'H:/zsw/Data/OULU/Depth_Map/Dev_files/'
     test_map_dir = 'H:/zsw/Data/OULU/Depth_Map/Test_files/'
 
-    train_list = 'D:/Data/OULU/Protocols/Protocol_1/Train.txt'
-    val_list = 'D:/Data/OULU/Protocols/Protocol_1/Dev.txt'
-    test_list =  'D:/Data/OULU/Protocols/Protocol_1/Test.txt'
+    train_list = 'D:/Data/OULU/Protocols/Protocol_2/Train.txt'
+    val_list = 'D:/Data/OULU/Protocols/Protocol_2/Dev.txt'
+    test_list =  'D:/Data/OULU/Protocols/Protocol_2/Test.txt'
 
-    train_csv = r'H:/zsw/Data/OULU/CSV/train_1.csv'  # the train split file
-    val_csv = r'H:/zsw/Data/OULU/CSV/val_1.csv'      # the validation split file
-    test_csv = r'H:/zsw/Data/OULU/CSV/test_1.csv'
+    train_csv = r'H:/zsw/Data/OULU/CSV/train_2.csv'  # the train split file
+    val_csv = r'H:/zsw/Data/OULU/CSV/val_2.csv'      # the validation split file
+    test_csv = r'H:/zsw/Data/OULU/CSV/test_2.csv'
 
-    train_map_csv = r'H:/zsw/Data/OULU/CSV/train_map_1.csv'  # the train split file
-    val_map_csv = r'H:/zsw/Data/OULU/CSV/val_map_1.csv'  # the validation split file
-    test_map_csv = r'H:/zsw/Data/OULU/CSV/test_map_1.csv'
+    train_map_csv = r'H:/zsw/Data/OULU/CSV/train_map_2.csv'  # the train split file
+    val_map_csv = r'H:/zsw/Data/OULU/CSV/val_map_2.csv'  # the validation split file
+    test_map_csv = r'H:/zsw/Data/OULU/CSV/test_map_2.csv'
 
 
 
