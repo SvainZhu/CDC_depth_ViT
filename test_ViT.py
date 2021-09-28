@@ -16,13 +16,13 @@ from albumentations.pytorch import ToTensorV2
 from models.statistic import calculate_statistic
 from sklearn.metrics import roc_auc_score
 
-model_type = 'CDC_depth_ViT_wCBAM'
-if model_type == 'CDC_depth_ViT_wCBAM':
-    from models.cdc_depth_vit_model_wCBAM import vit_base_patch16_224
-elif model_type == 'CDC_depth_ViT':
-    from models.cdc_depth_vit_model import vit_base_patch16_224
-elif model_type == 'ViT':
+model_type = 'ViT'
+if model_type == 'ViT':
     from models.base_model import vit_base_patch16_224
+# elif model_type == 'CDC_depth_ViT':
+#     from models.cdc_depth_vit_model import vit_base_patch16_224
+# elif model_type == 'CDC_ViT':
+#     from models.cdc_vit_model import vit_base_patch16_224
 else:
     raise ('Error model type!!!')
 
@@ -52,7 +52,7 @@ def test_models(model, dataloaders, dataset_name):
     for k, (inputs_val, labels_val) in enumerate(dataloaders):
         inputs_val, labels_val = inputs_val.cuda(), labels_val.to(torch.float32).cuda()
         with torch.no_grad():
-            outputs_val, _ = model(inputs_val)
+            outputs_val = model(inputs_val)
             outputs_val = outputs_val.squeeze(1)
             preds = torch.sigmoid(outputs_val)
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     # Modify the following directories to yourselves
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     batch_size = 16
-    test_csv = r'H:/zsw/Data/OULU/CSV/test_2.csv'      # The validation split file
+    test_csv = r'H:/zsw/Data/CASIA_FASD/CSV/test.csv'      # The validation split file
 
     use_cuda = torch.cuda.is_available()  # check if GPU exists
     device = torch.device("cuda" if use_cuda else "cpu")  # use CPU or GPU
@@ -110,8 +110,8 @@ if __name__ == '__main__':
     image_datasets = data.DataLoader(test_set, batch_size=batch_size, **params)
 
     model = vit_base_patch16_224(num_classes=1, has_logits=False)
-    model.load_state_dict(torch.load('./model_out/%s/%s_vit.ckpt' % (model_type + '1', '521199')))
+    model.load_state_dict(torch.load('./model_out/ViT_CASIA_FASD/121999_ma.ckpt'))
     model = nn.DataParallel(model.cuda())
-    dataset_name = "Oulu-Protocol2"
+    dataset_name = "Oulu-Protocol1"
 
     test_models(model=model, dataloaders=image_datasets, dataset_name=dataset_name)

@@ -4,7 +4,7 @@ from torch.utils import data
 import torch
 import cv2
 import math
-
+import os
 face_scale = 1.6
 
 ## ---------------------- Dataloaders ---------------------- ##
@@ -36,17 +36,26 @@ class Dataset_Csv(data.Dataset):
 
         # Load data
         img = cv2.imread(img_path)
-        face_temp = crop_face_from_scene(image=img, face_name_full=bbox_path, scale=face_scale)
+        if os.path.exists(bbox_path):
+            face_temp = crop_face_from_scene(image=img, face_name_full=bbox_path, scale=face_scale)
+        else:
+            face_temp = img
         face = self.transform(image=face_temp)['image']
         map_temp = cv2.imread(map_path, 0)
         if map_temp is None:
             map = numpy.zeros((32, 32))
             map = numpy.int8(map)
         else:
-            map = cv2.resize(crop_face_from_scene(image=map_temp, face_name_full=bbox_path, scale=face_scale), (32, 32))
+            if os.path.exists(bbox_path):
+                map = cv2.resize(crop_face_from_scene(image=map_temp, face_name_full=bbox_path,
+                                                      scale=face_scale), (32, 32))
+            else:
+                map = cv2.resize(map_temp, (32, 32))
         label = self.labels[index]  # (labels) LongTensor are for int64 instead of FloatTensor
 
         return face, map, label
+
+
 
 def crop_face_from_scene(image, face_name_full, scale):
     f = open(face_name_full, 'r')

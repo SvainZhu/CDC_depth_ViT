@@ -300,18 +300,26 @@ def validation_data(test_file, test_map_file):
 
 if __name__ == '__main__':
     # Modify the following directories to yourselves
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    database = 'RE'       #OULU, CASIA_FASD, MSU_MFSD, RE
     start = time.time()
-    current_epoch = 10
+    current_epoch = 0
     batch_size = 16
-    train_csv = r'H:/zsw/Data/OULU/CSV/train_1.csv'  # The train split file
-    val_csv = r'H:/zsw/Data/OULU/CSV/val_1.csv'      # The validation split file
+    if database == 'OULU':
+        train_csv = r'H:/zsw/Data/%s/CSV/train_1.csv'  # The train split file
+        val_csv = r'H:/zsw/Data/%s/CSV/val_1.csv'      # The validation split file
 
-    train_map_csv = r'H:/zsw/Data/OULU/CSV/train_map_1.csv'  # The train split file
-    val_map_csv = r'H:/zsw/Data/OULU/CSV/val_map_1.csv'  # The validation split file
+        train_map_csv = r'H:/zsw/Data/%s/CSV/train_map_1.csv'  # The train split file
+        val_map_csv = r'H:/zsw/Data/%s/CSV/val_map_1.csv'  # The validation split file
+    else:
+        train_csv = r'H:/zsw/Data/%s/CSV/train.csv' % database  # The train split file
+        val_csv = r'H:/zsw/Data/%s/CSV/test.csv' % database     # The validation split file
+
+        train_map_csv = r'H:/zsw/Data/%s/CSV/train_map.csv' % database  # The train split file
+        val_map_csv = r'H:/zsw/Data/%s/CSV/test_map.csv' % database      # The validation split file
 
     #  Output path
-    model_dir = 'E:/zsw/CDC_depth_ViT/model_out/CDC_depth_ViT1/'
+    model_dir = 'model_out/CDC_depth_ViT_%s/' % database
 
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
@@ -330,7 +338,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if use_cuda else "cpu")  # use CPU or GPU
 
     # Data loading parameters
-    params = {'shuffle': False, 'num_workers': 4, 'pin_memory': True} if use_cuda else {}
+    params = {'shuffle': False, 'num_workers': 0, 'pin_memory': True} if use_cuda else {}
 
     train_list = []
     train_map_list = []

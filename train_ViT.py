@@ -9,12 +9,12 @@ from torch.optim import lr_scheduler
 from torch.utils.data import WeightedRandomSampler
 import torch.nn as nn
 from torch.utils import data
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, roc_curve, auc
 from random import shuffle
 from models.utils import Dataset_Csv
 import csv
 from sklearn.metrics import confusion_matrix
-from models.cdc_vit_model import vit_base_patch16_224
+from models.base_model import vit_base_patch16_224, vit_base_patch32_224
 
 from albumentations import *
 from albumentations.pytorch import ToTensorV2
@@ -69,7 +69,7 @@ def train_model(model, model_dir, criterion, optimizer, scheduler, num_epochs=10
     for epoch in range(current_epoch, num_epochs):
         best_test_logloss = 10.0
         epoch_start = time.time()
-        model_out_path = os.path.join(model_dir, str(epoch) + '_vit.ckpt')
+        model_out_path = os.path.join(model_dir, str(epoch) + '_ma.ckpt')
         log.write('------------------------------------------------------------------------\n')
         # Each epoch has a training and validation phase
         for phase in ['train', 'test']:
@@ -112,7 +112,7 @@ def train_model(model, model_dir, criterion, optimizer, scheduler, num_epochs=10
                                                                                                       num_epochs - 1,
                                                                                                       i, len(
                                 dataloaders[phase]), phase, batch_loss, batch_acc))
-                if (i + 1) % 600 == 0:
+                if (i + 1) % 500 == 0:
                     inter_loss = running_loss_train / 1000.0
                     log.write('last phase train loss is {}\n'.format(inter_loss))
                     running_loss_train = 0.0
@@ -120,7 +120,7 @@ def train_model(model, model_dir, criterion, optimizer, scheduler, num_epochs=10
                     if test_loss < best_test_logloss:
                         best_test_logloss = test_loss
                         log.write('save current model {}, Now time is {}, best logloss is {}\n'.format(i,time.asctime( time.localtime(time.time()) ),best_test_logloss))
-                        model_out_paths = os.path.join(model_dir, str(epoch) + str(i) + '_vit.ckpt')
+                        model_out_paths = os.path.join(model_dir, str(epoch) + str(i) + '_ma.ckpt')
                         torch.save(model.module.state_dict(), model_out_paths)
                     model.train()
                     # scheduler.step()
@@ -141,7 +141,7 @@ def train_model(model, model_dir, criterion, optimizer, scheduler, num_epochs=10
             if phase == 'test' and epoch_loss < best_logloss:
                 best_logloss = epoch_loss
                 best_epoch = epoch
-                torch.save(model.module.state_dict(), model_out_path)
+                # torch.save(model.module.state_dict(), model_out_path)
         log.write('Epoch {}/{} Time {}s\n'.format(epoch, num_epochs - 1, time.time() - epoch_start))
     log.write('***************************************************')
     log.write('Best logloss {:.4f} and Best Epoch is {}\n'.format(best_logloss, best_epoch))
@@ -220,13 +220,16 @@ if __name__ == '__main__':
     # Modify the following directories to yourselves
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     start = time.time()
-    current_epoch = 0
-    batch_size = 16
-    train_csv = r'H:/zsw/Data/OULU/CSV/train_1.csv'  # The train split file
-    val_csv = r'H:/zsw/Data/OULU/CSV/val_1.csv'      # The validation split file
+    current_epoch = 20
+    batch_size = 32
+    # train_csv = r'H:/zsw/Data/OULU/CSV/train_1.csv'  # The train split file
+    # val_csv = r'H:/zsw/Data/OULU/CSV/val_1.csv'      # The validation split file
+
+    train_csv = "H:/zsw/Data/CASIA_FASD/CSV/train.csv"
+    val_csv = "H:/zsw/Data/CASIA_FASD/CSV/test.csv"
 
     #  Output path
-    model_dir = 'E:/zsw/CDC_depth_ViT/model_out/CDC_ViT1/'
+    model_dir = 'E:/zsw/CDC_depth_ViT/model_out/ViT_CASIA_FASD/'
 
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
@@ -239,7 +242,7 @@ if __name__ == '__main__':
 
     log = Logger(log_dir, sys.stdout)
     log.write('model : ViT   batch_size : 32 frames : 6 \n')
-    log.write('pretrain : False   input_size : 224*224\n')
+    log.write('pretrain : True   input_size : 224*224\n')
 
     use_cuda = torch.cuda.is_available()  # check if GPU exists
     device = torch.device("cuda" if use_cuda else "cpu")  # use CPU or GPU
@@ -286,16 +289,18 @@ if __name__ == '__main__':
 
     model = vit_base_patch16_224(num_classes=1, has_logits=False)
     model.train()
+    model.load_state_dict(torch.load('./model_out/ViT_CASIA_FASD/191499_ma.ckpt'))
     model = nn.DataParallel(model.cuda())
+
     criterion = nn.BCEWithLogitsLoss()
     criterion.cuda()
 
-    optimizer_ft = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.001)
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.5)
+    optimizer_ft = optim.Adam(model.parameters(), lr=0.001, weight_decay=0.001)
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=3, gamma=0.5)
 
     train_model(model=model, model_dir=model_dir, criterion=criterion, optimizer=optimizer_ft,
                 scheduler=exp_lr_scheduler,
-                num_epochs=60,
+                num_epochs=40,
                 current_epoch=current_epoch)
 
     elapsed = (time.time() - start)
