@@ -13,11 +13,12 @@ from sklearn.metrics import accuracy_score, roc_curve, auc
 from random import shuffle
 from models.utils_depth import Dataset_Csv
 import csv
-from sklearn.metrics import confusion_matrix
 from models.cdc_depth_vit_model import vit_base_patch16_224, vit_base_patch32_224
 import torch.nn.functional as F
 from albumentations import *
 from albumentations.pytorch import ToTensorV2
+from models.statistic import calculate_statistic
+from sklearn.metrics import roc_auc_score
 
 vit_transforms = Compose([
     Resize(224, 224),
@@ -247,16 +248,17 @@ def val_models(model, criterion, depth_criterion, num_epochs, test_list, current
 
     epoch_loss = running_loss_val / (len(test_list) / batch_size)
     y_trues, y_scores = np.array(y_trues), np.array(y_scores)
-    accuracy = accuracy_score(y_trues, np.where(y_scores > 0.5, 1, 0))
+    APCER, NPCER, ACER, ACC, HTER = calculate_statistic(y_scores, y_trues)
+    AUC = roc_auc_score(y_trues, y_scores)
     # torch.save(model.module.state_dict(), model_out_paths)
     log.write(
         '**Epoch {}/{} Stage: {} Logloss: {:.4f} Accuracy: {:.4f}\n'.format(current_epoch, num_epochs - 1, phase,
                                                                             epoch_loss,
-                                                                            accuracy))
-    tn, fp, fn, tp = confusion_matrix(y_trues, np.where(y_scores > 0.5, 1, 0)).ravel()
+                                                                            ACC))
     log.write(
-        '**Epoch {}/{} Stage: {} TNR: {:.2f} FPR: {:.2f} FNR: {:.2f} TPR: {:.2f} \n'.format(current_epoch, num_epochs - 1, phase,
-                                                                                            tn/(fp + tn),fp/(fp + tn),fn/(tp + fn),tp/(tp + fn)))
+        '**Epoch {}/{} Stage: {} APCER: {:.4f} NPCER: {:.4f} ACER: {:.4f} HTER: {:.4f} AUC: {:.4f} \n'.format(current_epoch,
+                                                                                                              num_epochs - 1, phase,
+                                                                                                  APCER, NPCER, ACER, HTER, AUC))
     log.write('***************************************************\n')
     # model.train()
     return epoch_loss
@@ -300,17 +302,17 @@ def validation_data(test_file, test_map_file):
 
 if __name__ == '__main__':
     # Modify the following directories to yourselves
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    database = 'RE'       #OULU, CASIA_FASD, MSU_MFSD, RE
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    database = 'CASIA_FASD'       #OULU, CASIA_FASD, MSU_MFSD, RE
     start = time.time()
-    current_epoch = 0
-    batch_size = 16
+    current_epoch = 2
+    batch_size = 8
     if database == 'OULU':
-        train_csv = r'H:/zsw/Data/%s/CSV/train_1.csv'  # The train split file
-        val_csv = r'H:/zsw/Data/%s/CSV/val_1.csv'      # The validation split file
+        train_csv = r'H:/zsw/Data/%s/CSV/train_1.csv' % database # The train split file
+        val_csv = r'H:/zsw/Data/%s/CSV/val_1.csv' % database     # The validation split file
 
-        train_map_csv = r'H:/zsw/Data/%s/CSV/train_map_1.csv'  # The train split file
-        val_map_csv = r'H:/zsw/Data/%s/CSV/val_map_1.csv'  # The validation split file
+        train_map_csv = r'H:/zsw/Data/%s/CSV/train_map_1.csv' % database # The train split file
+        val_map_csv = r'H:/zsw/Data/%s/CSV/val_map_1.csv' % database # The validation split file
     else:
         train_csv = r'H:/zsw/Data/%s/CSV/train.csv' % database  # The train split file
         val_csv = r'H:/zsw/Data/%s/CSV/test.csv' % database     # The validation split file
@@ -381,7 +383,8 @@ if __name__ == '__main__':
 
     model = vit_base_patch16_224(num_classes=1, has_logits=False)
     model.train()
-    model.load_state_dict(torch.load('./model_out/CDC_depth_ViT1/491999_vit.ckpt'))
+    # model.load_state_dict(torch.load('./model_out/CDC_depth_ViT1/491999_vit.ckpt'))
+    model.load_state_dict(torch.load('./model_out/CDC_depth_ViT_CASIA_FASD/21499_vit.ckpt'))
     model = nn.DataParallel(model.cuda())
 
 
@@ -395,7 +398,7 @@ if __name__ == '__main__':
                 depth_criterion=criterion_contrastive_loss,
                 optimizer=optimizer_ft,
                 scheduler=exp_lr_scheduler,
-                num_epochs=60,
+                num_epochs=40,
                 current_epoch=current_epoch)
 
     elapsed = (time.time() - start)

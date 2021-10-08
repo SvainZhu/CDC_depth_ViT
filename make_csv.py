@@ -154,6 +154,6 @@ def RE_process():
 if __name__ == '__main__':
     # Modify the following directories to yourselves
     # Oulu_process()
-    # CASIA_FASD_process()
+    CASIA_FASD_process()
     # MSU_MFSD_process()
-    RE_process()
+    # RE_process()

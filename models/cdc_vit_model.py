@@ -83,42 +83,42 @@ class PatchEmbed(nn.Module):
             cdc_conv(64, 128, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
             nn.BatchNorm2d(128),
             nn.ReLU(),
-            cdc_conv(128, 256, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
-            nn.BatchNorm2d(256),
+            cdc_conv(128, 196, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
+            nn.BatchNorm2d(196),
             nn.ReLU(),
-            cdc_conv(256, 256, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
-            nn.BatchNorm2d(256),
+            cdc_conv(196, 128, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1),
         )
 
         self.Block2 = nn.Sequential(
-            cdc_conv(256, 512, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
-            nn.BatchNorm2d(512),
+            cdc_conv(128, 128, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
-            cdc_conv(512, 784, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
-            nn.BatchNorm2d(784),
+            cdc_conv(128, 196, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
+            nn.BatchNorm2d(196),
             nn.ReLU(),
-            cdc_conv(784, 512, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
-            nn.BatchNorm2d(512),
+            cdc_conv(196, 128, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         )
 
         self.Block3 = nn.Sequential(
-            cdc_conv(512, 1024, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
-            nn.BatchNorm2d(1024),
+            cdc_conv(128, 128, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
-            cdc_conv(1024, 1568, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
-            nn.BatchNorm2d(1568),
+            cdc_conv(128, 196, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
+            nn.BatchNorm2d(196),
             nn.ReLU(),
-            cdc_conv(1568, 1024, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
-            nn.BatchNorm2d(1024),
+            cdc_conv(196, 128, kernel_size=3, stride=1, padding=1, bias=False, theta=theta),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         )
 
-        self.last_conv = nn.Conv2d(1024, embed_dim, kernel_size=1, stride=1, bias=False)
+        self.last_conv = nn.Conv2d(128, embed_dim, kernel_size=1, stride=1, bias=False)
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
     def forward(self, x):

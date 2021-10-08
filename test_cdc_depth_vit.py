@@ -1,12 +1,7 @@
 from __future__ import print_function, division
-import torch.optim as optim
-import sys
-import time
 import numpy as np
 import os
 import torch
-from torch.optim import lr_scheduler
-from torch.utils.data import WeightedRandomSampler
 import torch.nn as nn
 from torch.utils import data
 from models.utils import Dataset_Csv
@@ -16,7 +11,9 @@ from albumentations.pytorch import ToTensorV2
 from models.statistic import calculate_statistic
 from sklearn.metrics import roc_auc_score
 
-model_type = 'CDC_depth_ViT_wCBAM'
+model_type = 'CDC_depth_ViT'
+database = 'RE'       # OULU, CASIA_FASD, MSU_MFSD, RE
+Protocol = '1'        # 1, 2, 3, 4
 if model_type == 'CDC_depth_ViT_wCBAM':
     from models.cdc_depth_vit_model_wCBAM import vit_base_patch16_224
 elif model_type == 'CDC_depth_ViT':
@@ -90,7 +87,10 @@ if __name__ == '__main__':
     # Modify the following directories to yourselves
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     batch_size = 16
-    test_csv = r'H:/zsw/Data/OULU/CSV/test_2.csv'      # The validation split file
+    if database == 'OULU':
+        test_csv = r'H:/zsw/Data/%s/CSV/test_%s.csv' % (database, Protocol)
+    else:
+        test_csv = r'H:/zsw/Data/%s/CSV/test.csv' % database
 
     use_cuda = torch.cuda.is_available()  # check if GPU exists
     device = torch.device("cuda" if use_cuda else "cpu")  # use CPU or GPU
@@ -110,8 +110,13 @@ if __name__ == '__main__':
     image_datasets = data.DataLoader(test_set, batch_size=batch_size, **params)
 
     model = vit_base_patch16_224(num_classes=1, has_logits=False)
-    model.load_state_dict(torch.load('./model_out/%s/%s_vit.ckpt' % (model_type + '1', '521199')))
+    # model.load_state_dict(torch.load('./model_out/CDC_depth_ViT_wCBAM1/591199_vit.ckpt'))
+    # model.load_state_dict(torch.load('./model_out/CDC_depth_ViT1/491999_vit.ckpt'))
+    model.load_state_dict(torch.load('./model_out/%s/%s_vit.ckpt' % (model_type + '_' + database, '27999')))
     model = nn.DataParallel(model.cuda())
-    dataset_name = "Oulu-Protocol2"
+    if database == 'OULU':
+        dataset_name = "Oulu-Protocol%s" % Protocol
+    else:
+        dataset_name = database
 
     test_models(model=model, dataloaders=image_datasets, dataset_name=dataset_name)

@@ -218,15 +218,26 @@ def validation_data(csv_file):
 
 if __name__ == '__main__':
     # Modify the following directories to yourselves
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    database = 'MSU_MFSD'       # OULU, CASIA_FASD, MSU_MFSD, RE
     start = time.time()
     current_epoch = 0
-    batch_size = 16
-    train_csv = r'H:/zsw/Data/OULU/CSV/train_1.csv'  # The train split file
-    val_csv = r'H:/zsw/Data/OULU/CSV/val_1.csv'      # The validation split file
+    batch_size = 8
+    if database == 'OULU':
+        train_csv = r'H:/zsw/Data/%s/CSV/train_1.csv' % database # The train split file
+        val_csv = r'H:/zsw/Data/%s/CSV/val_1.csv' % database     # The validation split file
+
+        train_map_csv = r'H:/zsw/Data/%s/CSV/train_map_1.csv' % database # The train split file
+        val_map_csv = r'H:/zsw/Data/%s/CSV/val_map_1.csv' % database # The validation split file
+    else:
+        train_csv = r'H:/zsw/Data/%s/CSV/train.csv' % database  # The train split file
+        val_csv = r'H:/zsw/Data/%s/CSV/test.csv' % database     # The validation split file
+
+        train_map_csv = r'H:/zsw/Data/%s/CSV/train_map.csv' % database  # The train split file
+        val_map_csv = r'H:/zsw/Data/%s/CSV/test_map.csv' % database      # The validation split file
 
     #  Output path
-    model_dir = 'E:/zsw/CDC_depth_ViT/model_out/CDC_ViT1/'
+    model_dir = 'model_out/CDC_ViT_%s/' % database
 
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
@@ -286,6 +297,7 @@ if __name__ == '__main__':
 
     model = vit_base_patch16_224(num_classes=1, has_logits=False)
     model.train()
+    model.load_state_dict(torch.load('./model_out/CDC_ViT1/191799_vit.ckpt'))
     model = nn.DataParallel(model.cuda())
     criterion = nn.BCEWithLogitsLoss()
     criterion.cuda()
@@ -295,7 +307,7 @@ if __name__ == '__main__':
 
     train_model(model=model, model_dir=model_dir, criterion=criterion, optimizer=optimizer_ft,
                 scheduler=exp_lr_scheduler,
-                num_epochs=60,
+                num_epochs=40,
                 current_epoch=current_epoch)
 
     elapsed = (time.time() - start)
